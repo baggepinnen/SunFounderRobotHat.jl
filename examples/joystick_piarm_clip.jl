@@ -31,7 +31,7 @@ function angles_control!(arm, left_js, right_js, clip_angle)
 
     alpha, beta, gamma = arm.servo_positions
 
-    # Left joystick controls alpha and gamma
+    # Left joystick controls alpha (up/down) and gamma (left/right)
     status = read_status(left_js)
     if status === :up
         alpha += 1
@@ -45,12 +45,9 @@ function angles_control!(arm, left_js, right_js, clip_angle)
     elseif status === :right
         gamma -= 1
         changed = true
-    elseif status === :pressed
-        clip_angle[] += 2
-        changed = true
     end
 
-    # Right joystick controls beta and clip (alternate direction)
+    # Right joystick controls beta (up/down) and clip (left/right)
     status = read_status(right_js)
     if status === :up
         beta += 1
@@ -58,7 +55,10 @@ function angles_control!(arm, left_js, right_js, clip_angle)
     elseif status === :down
         beta -= 1
         changed = true
-    elseif status === :pressed
+    elseif status === :left
+        clip_angle[] += 2
+        changed = true
+    elseif status === :right
         clip_angle[] -= 2
         changed = true
     end
