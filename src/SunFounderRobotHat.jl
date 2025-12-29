@@ -220,6 +220,35 @@ end
 
 const GPIO_PATH = "/sys/class/gpio"
 
+"""Write to a sysfs file"""
+function _sysfs_write(path::String, value::String)
+    fd = ccall(:open, Cint, (Cstring, Cint), path, 1)  # O_WRONLY = 1
+    if fd < 0
+        error("Failed to open $path for writing")
+    end
+    try
+        data = Vector{UInt8}(value)
+        ccall(:write, Cssize_t, (Cint, Ptr{UInt8}, Csize_t), fd, data, length(data))
+    finally
+        ccall(:close, Cint, (Cint,), fd)
+    end
+end
+
+"""Read from a sysfs file"""
+function _sysfs_read(path::String)::String
+    fd = ccall(:open, Cint, (Cstring, Cint), path, 0)  # O_RDONLY = 0
+    if fd < 0
+        error("Failed to open $path for reading")
+    end
+    try
+        buf = Vector{UInt8}(undef, 16)
+        n = ccall(:read, Cssize_t, (Cint, Ptr{UInt8}, Csize_t), fd, buf, length(buf))
+        return n > 0 ? String(buf[1:n]) : ""
+    finally
+        ccall(:close, Cint, (Cint,), fd)
+    end
+end
+
 """
     Pin(pin; mode=:out)
 
@@ -234,7 +263,7 @@ function Pin(pin; mode::Symbol=:out)
 
     if !exported
         try
-            Base.write(joinpath(GPIO_PATH, "export"), string(gpio))
+            _sysfs_write(joinpath(GPIO_PATH, "export"), string(gpio))
             sleep(0.1)  # Give kernel time to create files
             exported = true
         catch e
@@ -251,7 +280,7 @@ function direction!(pin::Pin, dir::Symbol)
     @assert dir in (:in, :out) "Direction must be :in or :out"
     pin.direction = dir
     try
-        Base.write(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "direction"), dir == :in ? "in" : "out")
+        _sysfs_write(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "direction"), dir == :in ? "in" : "out")
     catch
     end
 end
@@ -261,7 +290,7 @@ function value!(pin::Pin, val::Integer)
     if pin.direction != :out
         direction!(pin, :out)
     end
-    Base.write(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "value"), val > 0 ? "1" : "0")
+    _sysfs_write(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "value"), val > 0 ? "1" : "0")
 end
 
 """Read pin value"""
@@ -269,7 +298,7 @@ function value(pin::Pin)::Int
     if pin.direction != :in
         direction!(pin, :in)
     end
-    s = Base.read(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "value"), String)
+    s = _sysfs_read(joinpath(GPIO_PATH, "gpio$(pin.gpio)", "value"))
     return parse(Int, strip(s))
 end
 
@@ -279,7 +308,7 @@ off!(pin::Pin) = value!(pin, 0)
 function Base.close(pin::Pin)
     if pin.exported
         try
-            Base.write(joinpath(GPIO_PATH, "unexport"), string(pin.gpio))
+            _sysfs_write(joinpath(GPIO_PATH, "unexport"), string(pin.gpio))
         catch
         end
     end
