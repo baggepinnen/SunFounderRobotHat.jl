@@ -647,25 +647,35 @@ const JOYSTICK_THRESHOLD = 1000  # ADC deviation from center to trigger directio
 struct Joystick
     x_adc::ADCChannel
     y_adc::ADCChannel
-    button::Pin
+    button::Union{Pin, Nothing}
 end
 
 """
-    Joystick(dev::I2CDevice, x_channel, y_channel, button_pin)
+    Joystick(dev::I2CDevice, x_channel, y_channel, button_pin=nothing)
 
-Create a joystick from 2 ADC channels (X/Y axes) and a button pin.
+Create a joystick from 2 ADC channels (X/Y axes) and an optional button pin.
 
 # Example
 ```julia
 dev = opendevice()
-js = Joystick(dev, "A0", "A1", "D0")
+js = Joystick(dev, "A0", "A1", "D0")  # With button
+js = Joystick(dev, "A0", "A1")        # Without button
 status = read_status(js)  # Returns :up, :down, :left, :right, :pressed, or nothing
 ```
 """
-function Joystick(dev::I2CDevice, x_channel, y_channel, button_pin)
+function Joystick(dev::I2CDevice, x_channel, y_channel, button_pin=nothing)
     x_adc = ADCChannel(dev, x_channel)
     y_adc = ADCChannel(dev, y_channel)
-    btn = Pin(button_pin, mode=:in)
+    btn = if button_pin !== nothing
+        try
+            Pin(button_pin, mode=:in)
+        catch e
+            @warn "Could not initialize button pin $button_pin (GPIO permissions?): $e"
+            nothing
+        end
+    else
+        nothing
+    end
     Joystick(x_adc, y_adc, btn)
 end
 
@@ -674,15 +684,21 @@ end
 
 Read joystick status. Returns:
 - `:up`, `:down`, `:left`, `:right` for axis movement
-- `:pressed` if button is pressed
+- `:pressed` if button is pressed (and button is available)
 - `nothing` if joystick is centered and button not pressed
 
 Priority: button press > Y axis > X axis
 """
 function read_status(js::Joystick)
     # Button is typically active-low (0 when pressed)
-    if value(js.button) == 0
-        return :pressed
+    if js.button !== nothing
+        try
+            if value(js.button) == 0
+                return :pressed
+            end
+        catch
+            # GPIO read failed, ignore button
+        end
     end
 
     # Read ADC values (center is ~2048 for 12-bit ADC)
