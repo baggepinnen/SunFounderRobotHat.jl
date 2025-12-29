@@ -299,6 +299,8 @@ Move arm end-effector to Cartesian coordinate.
 # Arguments
 - `arm`: PiArm instance
 - `coord`: Vector [x, y, z] or tuple (x, y, z)
+
+See also [`set_angle!`](@ref) for setting angles directly.
 """
 function move_to!(arm::PiArm, coord)
     x, y, z = coord
@@ -310,7 +312,7 @@ end
 """
     set_speed!(arm::PiArm, speed)
 
-Set movement speed (0-100).
+Set default movement speed (0-100).
 """
 function set_speed!(arm::PiArm, speed::Int)
     arm.speed = clamp(speed, 0, 100)

@@ -37,13 +37,13 @@ println("Firmware: ", firmware_version(dev))
 
 # Servo control
 servo = Servo(dev, "P0")
-angle!(servo, 45)
-angle!(servo, -45)
+angle!(servo, 15)
+angle!(servo, -15)
 angle!(servo, 0)
 
 # PWM output
 pwm = PWMChannel(dev, "P1")
-freq!(pwm, 1000)  # 1kHz
+freq!(pwm, 50)  # 1kHz
 pulse_width_percent!(pwm, 50)
 
 # ADC input
