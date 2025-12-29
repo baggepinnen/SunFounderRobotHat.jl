@@ -435,12 +435,13 @@ end
 
 """Read raw ADC value (0-4095)"""
 function Base.read(adc::ADCChannel)::Int
-    # Write channel register with 2 dummy bytes, then read 2 bytes
+    # Write channel register with 2 dummy bytes to trigger conversion
     write_block(adc.dev, adc.reg, UInt8[0, 0])
-    sleep(0.001)  # Small delay for ADC conversion
-    data = _raw_read(adc.dev, 2)
+    # Read 2 bytes individually (like Python smbus read_byte)
+    msb = read_byte(adc.dev)
+    lsb = read_byte(adc.dev)
     # Big-endian: MSB first
-    return (Int(data[1]) << 8) | Int(data[2])
+    return (Int(msb) << 8) | Int(lsb)
 end
 
 """Read ADC value as voltage (0-3.3V)"""
