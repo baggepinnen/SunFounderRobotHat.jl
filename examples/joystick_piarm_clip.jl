@@ -17,8 +17,9 @@ dev = opendevice()
 left_joystick = Joystick(dev, "A0", "A1", "D0")
 right_joystick = Joystick(dev, "A2", "A3", "D1")
 
-# Create arm with servos on channels 1, 2, 3
-arm = PiArm(dev, [1, 2, 3])
+# Create arm with servos on channels P0, P1, P2 (hardware ports)
+# Hanging clip on P3
+arm = PiArm(dev, [0, 1, 2])
 init_hanging_clip!(arm, "P3")
 set_offset!(arm, [0, 0, 0])
 
