@@ -5,11 +5,11 @@
 
 module SunFounderRobotHat
 
-export I2CDevice, PWMChannel, ADCChannel, Servo, Motor, Pin
+export I2CDevice, PWMChannel, ADCChannel, Servo, Motor, Pin, Joystick
 export read_byte, write_byte, mem_read, mem_write
 export freq!, pulse_width!, pulse_width_percent!
 export angle!, read_voltage, speed!, firmware_version, battery_voltage, reset_mcu
-export opendevice
+export opendevice, read_status
 
 # PiArm exports
 export PiArm, coord2polar, polar2coord, limit_angle
@@ -636,6 +636,75 @@ close(dev)
 """
 function opendevice(; bus=I2C_BUS)
     I2CDevice(; bus=bus)
+end
+
+# =============================================================================
+# Joystick
+# =============================================================================
+
+const JOYSTICK_THRESHOLD = 1000  # ADC deviation from center to trigger direction
+
+struct Joystick
+    x_adc::ADCChannel
+    y_adc::ADCChannel
+    button::Pin
+end
+
+"""
+    Joystick(dev::I2CDevice, x_channel, y_channel, button_pin)
+
+Create a joystick from 2 ADC channels (X/Y axes) and a button pin.
+
+# Example
+```julia
+dev = opendevice()
+js = Joystick(dev, "A0", "A1", "D0")
+status = read_status(js)  # Returns :up, :down, :left, :right, :pressed, or nothing
+```
+"""
+function Joystick(dev::I2CDevice, x_channel, y_channel, button_pin)
+    x_adc = ADCChannel(dev, x_channel)
+    y_adc = ADCChannel(dev, y_channel)
+    btn = Pin(button_pin, mode=:in)
+    Joystick(x_adc, y_adc, btn)
+end
+
+"""
+    read_status(js::Joystick) -> Symbol or Nothing
+
+Read joystick status. Returns:
+- `:up`, `:down`, `:left`, `:right` for axis movement
+- `:pressed` if button is pressed
+- `nothing` if joystick is centered and button not pressed
+
+Priority: button press > Y axis > X axis
+"""
+function read_status(js::Joystick)
+    # Button is typically active-low (0 when pressed)
+    if value(js.button) == 0
+        return :pressed
+    end
+
+    # Read ADC values (center is ~2048 for 12-bit ADC)
+    x = read(js.x_adc)
+    y = read(js.y_adc)
+    center = 2048
+
+    # Check Y axis first (up/down)
+    if y > center + JOYSTICK_THRESHOLD
+        return :up
+    elseif y < center - JOYSTICK_THRESHOLD
+        return :down
+    end
+
+    # Check X axis (left/right)
+    if x > center + JOYSTICK_THRESHOLD
+        return :right
+    elseif x < center - JOYSTICK_THRESHOLD
+        return :left
+    end
+
+    return nothing
 end
 
 # =============================================================================
