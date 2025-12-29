@@ -27,7 +27,8 @@ clip_angle = Ref(0.0)
 
 function angles_control!(arm, left_js, right_js, clip_angle)
     set_speed!(arm, 100)
-    changed = false
+    arm_changed = false
+    clip_changed = false
 
     alpha, beta, gamma = arm.servo_positions
 
@@ -35,39 +36,43 @@ function angles_control!(arm, left_js, right_js, clip_angle)
     status = read_status(left_js)
     if status === :up
         alpha += 1
-        changed = true
+        arm_changed = true
     elseif status === :down
         alpha -= 1
-        changed = true
+        arm_changed = true
     elseif status === :left
         gamma += 1
-        changed = true
+        arm_changed = true
     elseif status === :right
         gamma -= 1
-        changed = true
+        arm_changed = true
     end
 
     # Right joystick controls beta (up/down) and clip (left/right)
     status = read_status(right_js)
     if status === :up
         beta += 1
-        changed = true
+        arm_changed = true
     elseif status === :down
         beta -= 1
-        changed = true
+        arm_changed = true
     elseif status === :left
         clip_angle[] += 2
-        changed = true
+        clip_changed = true
     elseif status === :right
         clip_angle[] -= 2
-        changed = true
+        clip_changed = true
     end
 
-    if changed
+    if arm_changed
         set_angle!(arm, [alpha, beta, gamma])
-        if arm.hanging_clip !== nothing
-            set_hanging_clip!(arm, clip_angle[])
-        end
+    end
+
+    if clip_changed && arm.hanging_clip !== nothing
+        set_hanging_clip!(arm, clip_angle[])
+    end
+
+    if arm_changed || clip_changed
         println("servo angles: $(arm.servo_positions), clip angle: $(clip_angle[])")
     end
 end
