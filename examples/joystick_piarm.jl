@@ -4,8 +4,12 @@
 using SunFounderRobotHat
 
 # Initialize device
-reset_mcu()
-sleep(0.01)
+try
+    reset_mcu()
+    sleep(0.01)
+catch e
+    @warn "Could not reset MCU (may require sudo): $e"
+end
 
 dev = opendevice()
 
