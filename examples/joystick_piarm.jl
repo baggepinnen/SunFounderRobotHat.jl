@@ -21,7 +21,7 @@ right_joystick = Joystick(dev, "A2", "A3", "D1")
 # Bucket on P3
 arm = PiArm(dev, [0, 1, 2])
 init_bucket!(arm, "P3")
-set_offset!(arm, [0, 0, 0])
+set_offset!(arm, [-80, 0, 0])
 
 # Track bucket angle state
 bucket_angle = Ref(0.0)
