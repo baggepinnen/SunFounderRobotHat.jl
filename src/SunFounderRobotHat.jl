@@ -11,6 +11,12 @@ export freq!, pulse_width!, pulse_width_percent!
 export angle!, read_voltage, speed!, firmware_version, battery_voltage, reset_mcu
 export opendevice
 
+# PiArm exports
+export PiArm, coord2polar, polar2coord, limit_angle
+export servo_move!, set_angle!, move_to!, set_speed!, set_offset!, calibration!
+export init_bucket!, init_hanging_clip!, init_electromagnet!
+export set_bucket!, set_hanging_clip!, set_electromagnet!
+
 # =============================================================================
 # Constants
 # =============================================================================
@@ -631,5 +637,11 @@ close(dev)
 function opendevice(; bus=I2C_BUS)
     I2CDevice(; bus=bus)
 end
+
+# =============================================================================
+# PiArm Robot Arm
+# =============================================================================
+
+include("PiArm.jl")
 
 end # module
